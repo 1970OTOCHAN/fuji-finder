@@ -30,6 +30,9 @@ h1{font-size:32px;line-height:1.15;margin:10px 0 2px;font-weight:800;text-align:
 #finder{padding:0;position:fixed;inset:0;background:#000;overflow:hidden}
 #vid,#cv{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 #vid{transform-origin:center center}
+#finder.okframe{box-shadow:inset 0 0 0 6px #7bd36a}
+#okpill{display:none;position:absolute;left:50%;top:max(14px,env(safe-area-inset-top));transform:translateX(-50%);background:#e8f6e2;color:#1d4a12;border-radius:999px;padding:6px 16px;font-weight:800;font-size:17px;white-space:nowrap}
+#finder.okframe #okpill{display:block}
 #msg{position:absolute;left:16px;right:16px;top:30%;text-align:center;color:#ffd98a;font-size:15px;text-shadow:0 1px 3px #000}
 .bottom{position:absolute;left:12px;right:12px;bottom:max(14px,env(safe-area-inset-bottom));display:flex;gap:8px;align-items:flex-end}
 .bottom .info{flex:1;color:#fff;font-size:15px;line-height:1.45;text-shadow:0 1px 3px #000,0 0 2px #000}
@@ -50,7 +53,7 @@ h1{font-size:32px;line-height:1.15;margin:10px 0 2px;font-weight:800;text-align:
 <text x="150" y="28" text-anchor="middle" font-size="15" font-weight="800" fill="#ffffff">富士山</text>
 </svg>
 <h1>富士山ファインダー</h1>
-<p class="ver">試作版 Ver 0.2</p>
+<p class="ver">試作版 Ver 0.3</p>
 <p class="catch">カメラに富士山の形を重ねて表示</p>
 <div class="warn"><b style="font-size:17px">⚠ 注意</b><br>歩きながら・運転しながら画面を見ないでください。周りと足元の安全に気を付けてください。</div>
 <div class="card">
@@ -72,6 +75,7 @@ h1{font-size:32px;line-height:1.15;margin:10px 0 2px;font-weight:800;text-align:
 <section id="finder" class="screen">
 <video id="vid" autoplay playsinline muted></video>
 <canvas id="cv"></canvas>
+<div id="okpill">✓ この方向です</div>
 <div id="msg"></div>
 <div class="bottom">
 <div class="info" id="fInfo">現在地を取得しています…</div>
@@ -89,7 +93,7 @@ const SIL=[...PROF.slice(1).reverse().map(([x,h])=>[-x,h]),...PROF];
 const DIRS=['北','北北東','北東','東北東','東','東南東','南東','南南東','南','南南西','南西','西南西','西','西北西','北西','北北西'];
 const FOV=50,ZOOMS=[1,2,4];
 let lat=null,lng=null,alt0=0,dist=null,brg=null,topEl=null,zi=0;
-let hx=null,hy=null,heading=null,pitch=0,gotSensor=false,oriName=null,stream=null,raf=0,wake=null,watchId=null;
+let onTarget=false,actx=null,hx=null,hy=null,heading=null,pitch=0,gotSensor=false,oriName=null,stream=null,raf=0,wake=null,watchId=null;
 
 function show(id){for(const s of document.querySelectorAll('.screen'))s.classList.toggle('on',s.id===id)}
 function norm(a){return((a+540)%360)-180}
@@ -144,7 +148,11 @@ function stopAll(){
   if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
   if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
   if(wake){wake.release().catch(()=>{});wake=null}
-  hx=hy=heading=null;gotSensor=false;
+  hx=hy=heading=null;gotSensor=false;onTarget=false;$('finder').classList.remove('okframe');
+}
+function beep(n){
+  try{if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();
+  for(let i=0;i<n;i++){const o=actx.createOscillator(),g=actx.createGain(),t=actx.currentTime+i*0.22;o.type='sine';o.frequency.value=1320;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.3,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+0.15);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+0.16)}}catch(err){}
 }
 function pill(c,cx,y,text,col){
   c.font='bold 18px sans-serif';const tw=c.measureText(text).width;
@@ -165,7 +173,10 @@ function loop(){
   const hy0=cy+pitch*ppd;
   c.setLineDash([8,6]);c.strokeStyle='rgba(255,255,255,.5)';c.lineWidth=1.5;c.beginPath();c.moveTo(0,hy0);c.lineTo(W,hy0);c.stroke();c.setLineDash([]);
   c.font='bold 14px sans-serif';c.textAlign='left';c.lineWidth=3;c.strokeStyle='rgba(0,0,0,.6)';c.strokeText('水平線',8,hy0-6);c.fillStyle='#fff';c.fillText('水平線',8,hy0-6);
-  const diff=norm(brg-heading),half=FOV/z/2;
+  const diff=norm(brg-heading),half=FOV/z/2,ad=Math.abs(diff);
+  if(!onTarget&&ad<=2){onTarget=true;beep(2)}else if(onTarget&&ad>3.5)onTarget=false;
+  $('finder').classList.toggle('okframe',onTarget);
+  c.strokeStyle=onTarget?'#7bd36a':'rgba(255,255,255,.7)';c.lineWidth=onTarget?3:1.2;c.beginPath();c.moveTo(cx,0);c.lineTo(cx,H);c.stroke();
   if(Math.abs(diff)<half+2){
     const els=SIL.map(([x,h])=>elev(h));
     const pts=SIL.map(([x,h],i)=>[cx+(diff+Math.atan2(x,dist)/R)*ppd,cy-(els[i]-pitch)*ppd]);
@@ -176,7 +187,7 @@ function loop(){
       if(els[i]>0){if(!cur)cur=[];cur.push(pts[i])}
     }
     if(cur)segs.push(cur);
-    for(const [w,col] of [[5,'#ffffff'],[2.5,'#ff8a3d']]){c.strokeStyle=col;c.lineWidth=w;for(const s of segs){c.beginPath();s.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.stroke()}}
+    for(const [w,col] of [[7,'#000000'],[3.5,'#FFEB3B']]){c.strokeStyle=col;c.lineWidth=w;for(const s of segs){c.beginPath();s.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.stroke()}}
     const [sx,sy]=pts[PROF.length-1],tall=pts[0][1]-sy;
     if(tall<24){c.setLineDash([5,5]);c.strokeStyle='#ffffff';c.lineWidth=2;c.beginPath();c.arc(sx,sy+tall/2,30,0,7);c.stroke();c.setLineDash([])}
     pill(c,sx,sy-Math.max(18,40-tall/2)-10,'富士山','#ffd98a');
@@ -190,7 +201,7 @@ function loop(){
   }
 }
 $('agree').onclick=async()=>{
-  show('finder');$('msg').textContent='';
+  show('finder');$('msg').textContent='';beep(1);
   startLoc();await startSensor();startCam();
   try{if(navigator.wakeLock)wake=await navigator.wakeLock.request('screen')}catch(err){}
   loop();
