@@ -50,7 +50,7 @@ h1{font-size:32px;line-height:1.15;margin:10px 0 2px;font-weight:800;text-align:
 <text x="150" y="28" text-anchor="middle" font-size="15" font-weight="800" fill="#ffffff">富士山</text>
 </svg>
 <h1>富士山ファインダー</h1>
-<p class="ver">試作版 Ver 0.1</p>
+<p class="ver">試作版 Ver 0.2</p>
 <p class="catch">カメラに富士山の形を重ねて表示</p>
 <div class="warn"><b style="font-size:17px">⚠ 注意</b><br>歩きながら・運転しながら画面を見ないでください。周りと足元の安全に気を付けてください。</div>
 <div class="card">
@@ -158,16 +158,25 @@ function loop(){
   const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);
   if(dist==null)return;
   const z=ZOOMS[zi];
-  $('fInfo').innerHTML='<b>'+dirName(brg)+' '+Math.round(brg)+'°</b>　約'+(dist<10?dist.toFixed(1):Math.round(dist))+'km<br>'+(topEl>0?'見える高さ 約'+topEl.toFixed(1)+'°（'+sizeWord(topEl)+'）':'地球の丸みで隠れる距離です');
+  $('fInfo').innerHTML='<b>'+dirName(brg)+' '+Math.round(brg)+'°</b>　約'+(dist<10?dist.toFixed(1):Math.round(dist))+'km<br>'+(topEl>0?'見える高さ 約'+topEl.toFixed(1)+'°（'+sizeWord(topEl)+'）'+(elev(PROF[PROF.length-1][1])<0?'<br>すそは地球の丸みで隠れます':''):'地球の丸みで隠れています（点線の部分）');
   if(heading==null){pill(c,W/2,H*0.45,'センサー準備中…','#fff');return}
   if(dist<3){pill(c,W/2,H*0.45,'富士山のすぐ近くです','#fff');return}
   const ppd=W/(FOV/z),cx=W/2,cy=H/2;
   const hy0=cy+pitch*ppd;
   c.setLineDash([8,6]);c.strokeStyle='rgba(255,255,255,.5)';c.lineWidth=1.5;c.beginPath();c.moveTo(0,hy0);c.lineTo(W,hy0);c.stroke();c.setLineDash([]);
+  c.font='bold 14px sans-serif';c.textAlign='left';c.lineWidth=3;c.strokeStyle='rgba(0,0,0,.6)';c.strokeText('水平線',8,hy0-6);c.fillStyle='#fff';c.fillText('水平線',8,hy0-6);
   const diff=norm(brg-heading),half=FOV/z/2;
   if(Math.abs(diff)<half+2){
-    const pts=SIL.map(([x,h])=>[cx+(diff+Math.atan2(x,dist)/R)*ppd,cy-(elev(h)-pitch)*ppd]);
-    for(const [w,col] of [[5,'#ffffff'],[2.5,'#ff8a3d']]){c.strokeStyle=col;c.lineWidth=w;c.lineJoin='round';c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.stroke()}
+    const els=SIL.map(([x,h])=>elev(h));
+    const pts=SIL.map(([x,h],i)=>[cx+(diff+Math.atan2(x,dist)/R)*ppd,cy-(els[i]-pitch)*ppd]);
+    c.setLineDash([6,5]);c.strokeStyle='rgba(255,200,170,.9)';c.lineWidth=2;c.lineJoin='round';c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.stroke();c.setLineDash([]);
+    const segs=[];let cur=null;
+    for(let i=0;i<pts.length;i++){
+      if(i>0&&(els[i-1]>0)!==(els[i]>0)){const t=els[i-1]/(els[i-1]-els[i]),q=[pts[i-1][0]+(pts[i][0]-pts[i-1][0])*t,pts[i-1][1]+(pts[i][1]-pts[i-1][1])*t];if(cur){cur.push(q);segs.push(cur);cur=null}else cur=[q]}
+      if(els[i]>0){if(!cur)cur=[];cur.push(pts[i])}
+    }
+    if(cur)segs.push(cur);
+    for(const [w,col] of [[5,'#ffffff'],[2.5,'#ff8a3d']]){c.strokeStyle=col;c.lineWidth=w;for(const s of segs){c.beginPath();s.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.stroke()}}
     const [sx,sy]=pts[PROF.length-1],tall=pts[0][1]-sy;
     if(tall<24){c.setLineDash([5,5]);c.strokeStyle='#ffffff';c.lineWidth=2;c.beginPath();c.arc(sx,sy+tall/2,30,0,7);c.stroke();c.setLineDash([])}
     pill(c,sx,sy-Math.max(18,40-tall/2)-10,'富士山','#ffd98a');
