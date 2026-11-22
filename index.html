@@ -66,7 +66,7 @@ h1{font-size:32px;line-height:1.15;margin:10px 0 2px;font-weight:800;text-align:
 <p class="en">Yama Scope</p>
 <p class="catch">富士山をさがせ！</p>
 <p class="lead">現在地からの富士山の見え方を表示</p>
-<p class="ver">Ver 0.6</p>
+<p class="ver">Ver 0.7</p>
 <div class="warn"><b style="font-size:17px">⚠ 注意</b><br>歩きながら・運転しながら画面を見ないでください。周りと足元の安全に気を付けてください。</div>
 <div class="card">
 <p><b>免責</b></p>
@@ -224,7 +224,7 @@ function loop(){
     if(cur)segs.push(cur);
     for(const [w,col] of [[7,'#000000'],[3.5,'#FFEB3B']]){c.strokeStyle=col;c.lineWidth=w;for(const s of segs){c.beginPath();s.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.stroke()}}
     const [sx,sy]=pts[PROF.length-1],tall=pts[0][1]-sy;
-    if(tall<24){c.setLineDash([5,5]);c.strokeStyle='#ffffff';c.lineWidth=2;c.beginPath();c.arc(sx,sy+tall/2,30,0,7);c.stroke();c.setLineDash([])}
+    if(tall<24){c.strokeStyle='#ffffff';c.lineWidth=1.5;c.beginPath();c.arc(sx,sy+tall/2,30,0,7);c.stroke()}
     pill(c,sx,sy-Math.max(18,40-tall/2)-10,'富士山','#ffd98a');
     if(pitch>12)pill(c,cx,H*0.2,'カメラを少し下に向けてください','#fff');
     else if(pitch<-12)pill(c,cx,H*0.2,'カメラを少し上に向けてください','#fff');
