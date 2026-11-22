@@ -7,6 +7,10 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="theme-color" content="#0f1a2e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="やまスコープ">
 <title>やまスコープ™ 富士山をさがせ！</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
@@ -66,7 +70,7 @@ h1{font-size:32px;line-height:1.15;margin:10px 0 2px;font-weight:800;text-align:
 <p class="en">Yama Scope</p>
 <p class="catch">富士山をさがせ！</p>
 <p class="lead">現在地からの富士山の見え方を表示</p>
-<p class="ver">Ver 0.7</p>
+<p class="ver">Ver 0.8</p>
 <div class="warn"><b style="font-size:17px">⚠ 注意</b><br>歩きながら・運転しながら画面を見ないでください。周りと足元の安全に気を付けてください。</div>
 <div class="card">
 <p><b>免責</b></p>
@@ -232,6 +236,7 @@ function loop(){
   tape(c,W,H,diff);
   $('fTop').textContent='今の向き '+Math.round(heading)+'°　目標 '+Math.round(brg)+'°';
 }
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}
 $('agree').onclick=async()=>{
   show('finder');$('msg').textContent='';beep(1);
   startLoc();await startSensor();startCam();
