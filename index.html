@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="theme-color" content="#0f1a2e">
+<title>富士山ファインダー（試作版）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f1a2e;--panel:#18263f;--ink:#f4f1ea;--sub:#a9b4c8;--fuji:#ff8a3d;--line:#2c3d5c}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:16px/1.6 "M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif;overflow-x:clip}
+.screen{display:none;min-height:100%;padding:max(20px,env(safe-area-inset-top)) 18px max(24px,env(safe-area-inset-bottom))}
+.screen.on{display:block}
+h1{font-size:32px;line-height:1.15;margin:10px 0 2px;font-weight:800;text-align:center;color:#fff}
+.ver{text-align:center;color:var(--sub);font-size:13px;margin:0 0 6px}
+.catch{font-size:19px;font-weight:800;color:var(--fuji);text-align:center;margin:0 0 16px}
+.hero{display:block;width:100%;max-width:360px;margin:0 auto 8px}
+.card{background:var(--panel);border-radius:14px;padding:14px 16px;margin:0 0 14px}
+.card p{margin:0 0 8px;font-size:16px}
+.card p b{font-size:17px}
+.warn{background:#3a2f12;color:#ffd98a;border-radius:10px;padding:10px 12px;font-size:16px;margin:0 0 14px}
+.btn{display:block;width:100%;min-height:60px;border:0;border-radius:12px;background:var(--fuji);color:#2a1200;font-family:inherit;font-size:22px;font-weight:800;cursor:pointer}
+.foot{text-align:center;color:var(--sub);font-size:12px;margin-top:18px}
+.chip{min-height:44px;padding:0 14px;border-radius:10px;border:1px solid #666;background:rgba(0,0,0,.55);color:#fff;font:700 15px inherit;font-family:inherit}
+#finder{padding:0;position:fixed;inset:0;background:#000;overflow:hidden}
+#vid,#cv{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#vid{transform-origin:center center}
+#msg{position:absolute;left:16px;right:16px;top:30%;text-align:center;color:#ffd98a;font-size:15px;text-shadow:0 1px 3px #000}
+.bottom{position:absolute;left:12px;right:12px;bottom:max(14px,env(safe-area-inset-bottom));display:flex;gap:8px;align-items:flex-end}
+.bottom .info{flex:1;color:#fff;font-size:15px;line-height:1.45;text-shadow:0 1px 3px #000,0 0 2px #000}
+.bottom .info b{font-size:20px}
+#rotate{display:none;position:fixed;inset:0;z-index:99;background:#0f1a2e;color:#f4f1ea;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;font-size:20px;font-weight:800}
+@media (orientation:landscape) and (max-height:520px){#rotate{display:flex}}
+</style>
+</head>
+<body>
+
+<div id="rotate">スマホを縦にしてください<span style="font-size:14px;font-weight:400;color:#a9b4c8">このアプリは縦画面専用です</span></div>
+
+<section id="opening" class="screen on">
+<svg class="hero" viewBox="0 0 300 130" aria-hidden="true">
+<rect width="300" height="130" rx="14" fill="#3a64a8"/>
+<path d="M20 112 Q80 100 115 72 L140 46 Q150 38 160 46 L185 72 Q220 100 280 112" fill="none" stroke="#ffffff" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M20 112 Q80 100 115 72 L140 46 Q150 38 160 46 L185 72 Q220 100 280 112" fill="none" stroke="#ff8a3d" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="150" y="28" text-anchor="middle" font-size="15" font-weight="800" fill="#ffffff">富士山</text>
+</svg>
+<h1>富士山ファインダー</h1>
+<p class="ver">試作版 Ver 0.1</p>
+<p class="catch">カメラに富士山の形を重ねて表示</p>
+<div class="warn"><b style="font-size:17px">⚠ 注意</b><br>歩きながら・運転しながら画面を見ないでください。周りと足元の安全に気を付けてください。</div>
+<div class="card">
+<p><b>免責</b></p>
+<p>本アプリは無料で提供しており、表示の正確さ・動作を保証するものではありません。本アプリの使用または使用できなかったことにより生じた事故・損害・トラブル等について、作者は一切の責任を負いません。</p>
+</div>
+<div class="card">
+<p><b>利用条件</b></p>
+<p>アプリそのものの無断での再配布・改変・販売はご遠慮ください。スクリーンショットやリンクでの紹介は自由です。</p>
+</div>
+<div class="card">
+<p><b>表示について</b></p>
+<p>線は計算で出した「富士山がある位置と大きさ」の目安です。手前の山や建物、天気によっては実際には見えません。スマホの方位センサーは数度ずれることがあります。</p>
+</div>
+<button class="btn" id="agree">同意してスタート</button>
+<p class="foot">© 2026 1970 OTOCHAN</p>
+</section>
+
+<section id="finder" class="screen">
+<video id="vid" autoplay playsinline muted></video>
+<canvas id="cv"></canvas>
+<div id="msg"></div>
+<div class="bottom">
+<div class="info" id="fInfo">現在地を取得しています…</div>
+<button class="chip" id="zoom">1倍</button>
+<button class="chip" id="back">終了</button>
+</div>
+</section>
+
+<script>
+{
+const R=Math.PI/180,$=id=>document.getElementById(id);
+const FUJI={lat:35.3606,lng:138.7274,h:3776};
+const PROF=[[0,3776],[0.6,3745],[1.2,3640],[2.5,3300],[4,2900],[6,2400],[9,1800],[13,1250],[18,800],[24,450]];
+const SIL=[...PROF.slice(1).reverse().map(([x,h])=>[-x,h]),...PROF];
+const DIRS=['北','北北東','北東','東北東','東','東南東','南東','南南東','南','南南西','南西','西南西','西','西北西','北西','北北西'];
+const FOV=50,ZOOMS=[1,2,4];
+let lat=null,lng=null,alt0=0,dist=null,brg=null,topEl=null,zi=0;
+let hx=null,hy=null,heading=null,pitch=0,gotSensor=false,oriName=null,stream=null,raf=0,wake=null,watchId=null;
+
+function show(id){for(const s of document.querySelectorAll('.screen'))s.classList.toggle('on',s.id===id)}
+function norm(a){return((a+540)%360)-180}
+function dirName(a){return DIRS[Math.round(a/22.5)%16]}
+function geo(){
+  const p1=lat*R,p2=FUJI.lat*R,dl=(FUJI.lng-lng)*R;
+  const a=Math.sin((p2-p1)/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+  dist=2*6371*Math.asin(Math.sqrt(a));
+  brg=((Math.atan2(Math.sin(dl)*Math.cos(p2),Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl))/R)+360)%360;
+  topEl=elev(FUJI.h);
+}
+function elev(h){
+  const d=Math.max(dist,0.3)*1000,drop=d*d/(2*6371000/0.87);
+  return Math.atan2(h-alt0-drop,d)/R;
+}
+function sizeWord(a){return a<0.8?'小指の先より小さい':a<1.3?'小指くらい':a<2.5?'親指くらい':a<5?'指2〜3本くらい':a<10?'こぶし半分くらい':'こぶし1つ以上'}
+function startLoc(){
+  if(!navigator.geolocation){$('fInfo').textContent='このスマホでは現在地が使えません';return}
+  watchId=navigator.geolocation.watchPosition(p=>{
+    lat=p.coords.latitude;lng=p.coords.longitude;alt0=Math.max(0,p.coords.altitude||0);geo();
+  },()=>{$('fInfo').textContent='現在地を取得できませんでした。位置情報をオンにしてください'},{enableHighAccuracy:true,timeout:20000,maximumAge:10000});
+}
+function onOri(e){
+  let h=null,p=null;
+  if(e.beta!=null&&e.gamma!=null){
+    const cA=Math.cos((e.alpha||0)*R),sA=Math.sin((e.alpha||0)*R),cB=Math.cos(e.beta*R),sB=Math.sin(e.beta*R),cG=Math.cos(e.gamma*R),sG=Math.sin(e.gamma*R);
+    const vx=-(cG*sA*sB+cA*sG),vy=-(sA*sG-cA*cG*sB),vz=-(cB*cG);
+    p=Math.asin(Math.max(-1,Math.min(1,vz)))/R;
+    if(e.absolute===true||oriName==='deviceorientationabsolute')h=((Math.atan2(vx,vy)/R)+360)%360;
+  }
+  if(typeof e.webkitCompassHeading==='number')h=e.webkitCompassHeading;
+  if(h==null)return;
+  gotSensor=true;
+  const k=0.15,sx=Math.sin(h*R),sy=Math.cos(h*R);
+  if(hx==null){hx=sx;hy=sy}else{hx+=(sx-hx)*k;hy+=(sy-hy)*k}
+  heading=((Math.atan2(hx,hy)/R)+360)%360;
+  if(p!=null)pitch+=(p-pitch)*0.2;
+}
+async function startSensor(){
+  try{if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){const r=await DeviceOrientationEvent.requestPermission();if(r!=='granted'){$('msg').textContent='方位センサーの使用が許可されませんでした';return}}}catch(err){}
+  oriName=('ondeviceorientationabsolute' in window)?'deviceorientationabsolute':'deviceorientation';
+  window.addEventListener(oriName,onOri);
+  setTimeout(()=>{if(!gotSensor)$('msg').textContent='方位センサーが動きません。このスマホでは使えない可能性があります'},4000);
+}
+async function startCam(){
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});$('vid').srcObject=stream}
+  catch(err){$('msg').textContent='カメラが使えません（方角の案内は使えます）'}
+}
+function stopAll(){
+  cancelAnimationFrame(raf);
+  if(oriName)window.removeEventListener(oriName,onOri);
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+  if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
+  if(wake){wake.release().catch(()=>{});wake=null}
+  hx=hy=heading=null;gotSensor=false;
+}
+function pill(c,cx,y,text,col){
+  c.font='bold 18px sans-serif';const tw=c.measureText(text).width;
+  c.fillStyle='rgba(0,0,0,.6)';c.beginPath();c.roundRect?c.roundRect(cx-tw/2-14,y-24,tw+28,34,10):c.rect(cx-tw/2-14,y-24,tw+28,34);c.fill();
+  c.fillStyle=col;c.textAlign='center';c.fillText(text,cx,y);
+}
+function loop(){
+  raf=requestAnimationFrame(loop);
+  const cv=$('cv'),dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;
+  if(cv.width!==W*dpr){cv.width=W*dpr;cv.height=H*dpr}
+  const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);
+  if(dist==null)return;
+  const z=ZOOMS[zi];
+  $('fInfo').innerHTML='<b>'+dirName(brg)+' '+Math.round(brg)+'°</b>　約'+(dist<10?dist.toFixed(1):Math.round(dist))+'km<br>'+(topEl>0?'見える高さ 約'+topEl.toFixed(1)+'°（'+sizeWord(topEl)+'）':'地球の丸みで隠れる距離です');
+  if(heading==null){pill(c,W/2,H*0.45,'センサー準備中…','#fff');return}
+  if(dist<3){pill(c,W/2,H*0.45,'富士山のすぐ近くです','#fff');return}
+  const ppd=W/(FOV/z),cx=W/2,cy=H/2;
+  const hy0=cy+pitch*ppd;
+  c.setLineDash([8,6]);c.strokeStyle='rgba(255,255,255,.5)';c.lineWidth=1.5;c.beginPath();c.moveTo(0,hy0);c.lineTo(W,hy0);c.stroke();c.setLineDash([]);
+  const diff=norm(brg-heading),half=FOV/z/2;
+  if(Math.abs(diff)<half+2){
+    const pts=SIL.map(([x,h])=>[cx+(diff+Math.atan2(x,dist)/R)*ppd,cy-(elev(h)-pitch)*ppd]);
+    for(const [w,col] of [[5,'#ffffff'],[2.5,'#ff8a3d']]){c.strokeStyle=col;c.lineWidth=w;c.lineJoin='round';c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.stroke()}
+    const [sx,sy]=pts[PROF.length-1],tall=pts[0][1]-sy;
+    if(tall<24){c.setLineDash([5,5]);c.strokeStyle='#ffffff';c.lineWidth=2;c.beginPath();c.arc(sx,sy+tall/2,30,0,7);c.stroke();c.setLineDash([])}
+    pill(c,sx,sy-Math.max(18,40-tall/2)-10,'富士山','#ffd98a');
+    if(pitch>12)pill(c,cx,H*0.2,'カメラを少し下に向けてください','#fff');
+    else if(pitch<-12)pill(c,cx,H*0.2,'カメラを少し上に向けてください','#fff');
+  }else{
+    pill(c,cx,H*0.42,'富士山はこっち','#ffd98a');
+    pill(c,cx,H*0.42+44,diff>0?'右へ '+Math.round(diff)+'° ▶':'◀ 左へ '+Math.round(-diff)+'°','#fff');
+    const ex=diff>0?W-18:18,d=diff>0?1:-1,ay=H*0.42+12;
+    c.fillStyle='#ff8a3d';c.beginPath();c.moveTo(ex+d*10,ay);c.lineTo(ex-d*8,ay-14);c.lineTo(ex-d*8,ay+14);c.closePath();c.fill();
+  }
+}
+$('agree').onclick=async()=>{
+  show('finder');$('msg').textContent='';
+  startLoc();await startSensor();startCam();
+  try{if(navigator.wakeLock)wake=await navigator.wakeLock.request('screen')}catch(err){}
+  loop();
+};
+$('zoom').onclick=()=>{zi=(zi+1)%ZOOMS.length;$('zoom').textContent=ZOOMS[zi]+'倍';$('vid').style.transform='scale('+ZOOMS[zi]+')'};
+$('back').onclick=()=>{stopAll();show('opening')};
+}
+</script>
+</body>
+</html>
