@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache">
+<title>山なまえスコープ</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#0f1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#000;color:#fff;font-family:"Hiragino Sans","Noto Sans JP",sans-serif;overflow:hidden;-webkit-user-select:none;user-select:none}
+#op{position:fixed;inset:0;background:#0f1a2e;overflow-y:auto;padding:max(24px,env(safe-area-inset-top)) 20px 32px;z-index:20}
+#op h1{font-size:28px;text-align:center;margin:8px 0 0}
+#op .en{text-align:center;color:#B5D4F4;font-size:14px}
+#op .sub{text-align:center;color:#ffd27a;font-size:17px;margin:4px 0 12px}
+#op .lead{font-size:14px;line-height:1.7;margin-bottom:14px;color:#dde6f3}
+#rot{position:fixed;inset:0;background:#0f1a2e;display:none;align-items:center;justify-content:center;font-size:20px;z-index:50}
+@media (orientation:landscape) and (max-height:500px){#rot{display:flex}}
+#vd.z2{transform:scale(2)}
+#bQuit{background:#A32D2D!important;border-radius:8px}
+#bZoom{border:1px solid #fff!important;border-radius:8px}
+#op .art{display:block;margin:0 auto 18px;width:220px}
+#op .box{background:rgba(255,255,255,.08);border-radius:10px;padding:14px;font-size:14px;line-height:1.7;margin-bottom:14px}
+#op .box b{display:block;color:#ffd27a;margin-bottom:4px}
+#go{display:block;width:100%;padding:16px;font-size:18px;border:0;border-radius:12px;background:#ffb830;color:#2a1a00;font-weight:bold;margin-top:8px}
+#op .cr{text-align:center;color:#888780;font-size:12px;margin-top:16px}
+video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover}
+#cv{position:fixed;inset:0;width:100%;height:100%}
+#top{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;background:rgba(0,0,0,.5);display:flex;justify-content:space-between;font-size:14px;z-index:5}
+#msg{position:fixed;left:16px;right:16px;top:30%;text-align:center;background:rgba(0,0,0,.7);border-radius:10px;padding:14px;font-size:15px;line-height:1.6;z-index:6;display:none}
+#bar{position:fixed;left:0;right:0;bottom:0;padding:10px 12px calc(env(safe-area-inset-bottom) + 12px);background:rgba(0,0,0,.55);display:flex;justify-content:space-around;align-items:center;z-index:5}
+#bar button{background:none;border:0;color:#fff;font-size:13px;min-width:64px;min-height:44px}
+.panel{position:fixed;left:0;right:0;bottom:0;max-height:70%;overflow-y:auto;background:rgba(15,26,46,.97);border-radius:16px 16px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom) + 16px);z-index:10;display:none}
+.panel h2{font-size:17px;margin-bottom:10px}
+.panel .x{position:absolute;right:10px;top:8px;background:none;border:0;color:#fff;font-size:26px;width:44px;height:44px}
+.row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.1);font-size:15px}
+.row small{color:#bcd}
+.adj{display:flex;gap:8px;align-items:center}
+.adj button{width:48px;height:44px;border-radius:8px;border:1px solid #5b7bb0;background:#1c2c4a;color:#fff;font-size:16px}
+.adj span{min-width:64px;text-align:center}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;height:44px;border-radius:8px;border:1px solid #5b7bb0;background:#1c2c4a;color:#fff;font-size:15px}
+.seg button.on{background:#ffb830;color:#2a1a00;border-color:#ffb830}
+.note{font-size:12px;color:#9bb;line-height:1.6;margin-top:10px}
+#ver{position:fixed;right:8px;bottom:calc(env(safe-area-inset-bottom) + 72px);font-size:11px;color:rgba(255,255,255,.6);z-index:4}
+</style>
+</head>
+<body>
+
+<div id="op">
+  <svg class="art" viewBox="0 0 220 120" aria-hidden="true">
+    <circle cx="80" cy="60" r="44" fill="#16284a" stroke="#ffb830" stroke-width="6"/>
+    <circle cx="140" cy="60" r="44" fill="#16284a" stroke="#ffb830" stroke-width="6"/>
+    <rect x="100" y="48" width="20" height="20" rx="4" fill="#ffb830"/>
+    <path d="M44 80 L62 58 L72 66 L84 46 L96 64 L104 72 L104 92 L44 92Z" fill="#5d7b8a"/>
+    <path d="M116 78 L128 66 L140 40 L152 60 L166 54 L178 74 L178 92 L116 92Z" fill="#5d7b8a"/>
+    <path d="M128 66 L140 40 L152 60 L166 54" fill="none" stroke="#ffd27a" stroke-width="2.5"/>
+  </svg>
+  <h1>山なまえスコープ™</h1>
+  <p class="en">Yama-Namae Scope</p>
+  <p class="sub">あの山の名前は？</p>
+  <p class="lead">現在地から見える山の形（稜線）と、山の名前・標高・距離をカメラ画面に表示します。</p>
+
+  <div class="box"><b>注意</b>
+  歩きながら・運転しながら画面を見ないでください。周りの安全と足もとに気をつけてご利用ください。</div>
+
+  <div class="box"><b>免責</b>
+  本アプリは無料で提供しており、表示の正確さ・動作を保証するものではありません。本アプリの使用または使用できなかったことにより生じた事故・損害・トラブル等について、作者は一切の責任を負いません。走行中は本アプリの操作・注視をせず、交通ルールを守って安全運転でご利用ください。</div>
+
+  <div class="box"><b>利用条件</b>
+  アプリそのものの無断での再配布・改変・販売はご遠慮ください。スクリーンショットやリンクでの紹介は自由です。</div>
+
+  <div class="box"><b>表示について</b>
+  ・稜線と山名は、地形データから計算した目安です。木・建物・天気は反映されません。<br>
+  ・スマホの方位センサーは数度ずれることがあります。ずれたときは「補正」で合わせてください。<br>
+  ・カメラ、位置情報、方位センサーを使います。読み込みにはインターネット接続が必要です。<br>
+  ・標高：国土地理院 標高タイル／山名：© OpenStreetMap contributors</div>
+
+  <button id="go">同意してスタート</button>
+  <p class="cr">Ver 1.0　山なまえスコープ™ © 2026 1970 OTOCHAN</p>
+</div>
+<div id="rot">スマホを縦にしてください</div>
+
+<video id="vd" playsinline muted autoplay></video>
+<canvas id="cv"></canvas>
+<div id="top"><span id="hd">方位 --</span><span id="loc">現在地を取得しています…</span></div>
+<div id="msg"></div>
+<div id="ver">Ver 1.0</div>
+<div id="bar">
+  <button id="bZoom">1倍</button>
+  <button id="bList">リスト</button>
+  <button id="bSet">補正</button>
+  <button id="bQuit">終了</button>
+</div>
+
+<div class="panel" id="pList">
+  <button class="x" data-close>×</button>
+  <h2>見えている山（近い順）</h2>
+  <div id="list"></div>
+</div>
+
+<div class="panel" id="pSet">
+  <button class="x" data-close>×</button>
+  <h2>補正・設定</h2>
+  <div class="row"><span>方位（左右）</span><div class="adj"><button data-a="h" data-v="-1">◀</button><span id="vH">0°</span><button data-a="h" data-v="1">▶</button></div></div>
+  <div class="row"><span>上下</span><div class="adj"><button data-a="p" data-v="-0.5">▼</button><span id="vP">0°</span><button data-a="p" data-v="0.5">▲</button></div></div>
+  <div class="row"><span>画角（線の幅）</span><div class="adj"><button data-a="f" data-v="-2">−</button><span id="vF">52°</span><button data-a="f" data-v="2">＋</button></div></div>
+  <div style="margin:14px 0 6px">計算する範囲</div>
+  <div class="seg" id="seg"><button data-r="50">50km</button><button data-r="100">100km</button><button data-r="150">150km</button></div>
+  <div class="row" style="border:0;margin-top:10px"><button id="bReset" style="width:100%;height:44px;border-radius:8px;border:1px solid #5b7bb0;background:none;color:#fff">補正を元に戻す</button></div>
+  <p class="note">名前が実際の山より右にずれていたら「◀」、左なら「▶」を押してください。稜線の線が山より広い（狭い）ときは画角を調整してください。範囲を広げると遠くの山まで出ますが、読み込みに時間がかかります。</p>
+</div>
+
+<script>
+{
+const $=id=>document.getElementById(id);
+const D2R=Math.PI/180,R2D=180/Math.PI,RE=6371000,K=0.13;
+const ld=(k,d)=>{try{const v=localStorage.getItem('ync_'+k);return v===null?d:JSON.parse(v)}catch(e){return d}};
+const sv=(k,v)=>{try{localStorage.setItem('ync_'+k,JSON.stringify(v))}catch(e){}};
+let cfg={h:ld('h',0),p:ld('p',0),f:ld('f',52),r:ld('r',100)};
+let zoom=1,pos=null,calcPos=null,obsH=0,sky=null,peaks=[],busy=false;
+let head=null,pitch=0,roll=0,sx=0,sy=0;
+const cv=$('cv'),ctx=cv.getContext('2d'),vd=$('vd');
+const msg=t=>{const m=$('msg');if(t){m.textContent=t;m.style.display='block'}else m.style.display='none'};
+
+/* ---------- 標高タイル ---------- */
+const tiles=new Map();
+function tileURL(z,x,y){return `https://cyberjapandata.gsi.go.jp/xyz/dem_png/${z}/${x}/${y}.png`}
+function loadTile(z,x,y){
+  const key=z+'/'+x+'/'+y;
+  if(tiles.has(key))return Promise.resolve();
+  return new Promise(res=>{
+    const im=new Image();im.crossOrigin='anonymous';
+    im.onload=()=>{
+      const c=document.createElement('canvas');c.width=c.height=256;
+      const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(im,0,0);
+      const d=g.getImageData(0,0,256,256).data,a=new Float32Array(65536);
+      for(let i=0;i<65536;i++){const v=d[i*4]*65536+d[i*4+1]*256+d[i*4+2];a[i]=v<8388608?v*0.01:(v===8388608?0:(v-16777216)*0.01)}
+      tiles.set(key,a);res();
+    };
+    im.onerror=()=>{tiles.set(key,null);res()};
+    im.src=tileURL(z,x,y);
+  });
+}
+function px(lat,lon,z){const n=256*2**z;const s=Math.sin(lat*D2R);return[(lon+180)/360*n,(0.5-Math.log((1+s)/(1-s))/(4*Math.PI))*n]}
+function hAt(lat,lon,z){
+  const[X,Y]=px(lat,lon,z);const tx=Math.floor(X/256),ty=Math.floor(Y/256);
+  const a=tiles.get(z+'/'+tx+'/'+ty);if(!a)return 0;
+  let fx=X-tx*256-0.5,fy=Y-ty*256-0.5;fx=Math.min(254.999,Math.max(0,fx));fy=Math.min(254.999,Math.max(0,fy));
+  const ix=fx|0,iy=fy|0,dx=fx-ix,dy=fy-iy,i=iy*256+ix;
+  return a[i]*(1-dx)*(1-dy)+a[i+1]*dx*(1-dy)+a[i+256]*(1-dx)*dy+a[i+257]*dx*dy;
+}
+function tileRange(lat,lon,rad,z){
+  const dLat=rad/111320,dLon=rad/(111320*Math.cos(lat*D2R));
+  const[a0,b0]=px(lat+dLat,lon-dLon,z),[a1,b1]=px(lat-dLat,lon+dLon,z);
+  const out=[];for(let x=Math.floor(a0/256);x<=Math.floor(a1/256);x++)for(let y=Math.floor(b0/256);y<=Math.floor(b1/256);y++)out.push([z,x,y]);return out;
+}
+async function loadAll(lat,lon,R){
+  const list=[...tileRange(lat,lon,16000,12),...tileRange(lat,lon,R,10)];
+  let done=0,i=0;
+  const work=async()=>{while(i<list.length){const t=list[i++];await loadTile(...t);done++;msg(`地形データを読み込み中… ${done}/${list.length}`)}};
+  await Promise.all(Array.from({length:8},work));
+}
+const NEAR=15000;
+const hg=(lat,lon,d)=>hAt(lat,lon,d<NEAR?12:10);
+function dest(lat,lon,az,d){const c=d/RE,la=lat*D2R,b=az*D2R;const la2=Math.asin(Math.sin(la)*Math.cos(c)+Math.cos(la)*Math.sin(c)*Math.cos(b));const lo2=lon*D2R+Math.atan2(Math.sin(b)*Math.sin(c)*Math.cos(la),Math.cos(c)-Math.sin(la)*Math.sin(la2));return[la2*R2D,lo2*R2D]}
+const ang=(h,d)=>Math.atan((h-obsH-d*d/(2*RE)*(1-K))/d)*R2D;
+function march(lat,lon,az,maxD){
+  let m=-90,d=60;
+  while(d<maxD){const[a,b]=dest(lat,lon,az,d);const e=ang(hg(a,b,d),d);if(e>m)m=e;d+=Math.max(25,d*0.006)}
+  return m;
+}
+function distAz(lat1,lon1,lat2,lon2){
+  const p1=lat1*D2R,p2=lat2*D2R,dl=(lon2-lon1)*D2R;
+  const a=Math.sin((p2-p1)/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+  const d=2*RE*Math.asin(Math.sqrt(a));
+  const az=(Math.atan2(Math.sin(dl)*Math.cos(p2),Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl))*R2D+360)%360;
+  return[d,az];
+}
+
+/* ---------- 山名（OpenStreetMap） ---------- */
+async function loadPeaks(lat,lon,R){
+  const q=`[out:json][timeout:40];node["natural"~"^(peak|volcano)$"]["name"](around:${R},${lat.toFixed(5)},${lon.toFixed(5)});out;`;
+  const eps=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
+  for(const e of eps){
+    try{const r=await fetch(e+'?data='+encodeURIComponent(q));if(!r.ok)continue;const j=await r.json();
+      return j.elements.map(n=>({name:n.tags['name:ja']||n.tags.name,ele:parseFloat(n.tags.ele),lat:n.lat,lon:n.lon})).filter(p=>p.name);
+    }catch(err){}
+  }
+  return null;
+}
+
+/* ---------- 計算 ---------- */
+async function compute(){
+  if(busy||!pos)return;busy=true;
+  const{lat,lon}=pos,R=cfg.r*1000;
+  try{
+    msg('山の名前データを読み込み中…');
+    const pk=await loadPeaks(lat,lon,R);
+    await loadAll(lat,lon,R);
+    msg('見える景色を計算中…');
+    await new Promise(r=>setTimeout(r,30));
+    obsH=hAt(lat,lon,12)+1.6;
+    const s=new Float32Array(720);
+    for(let i=0;i<720;i++)s[i]=march(lat,lon,i/2,R);
+    const vis=[];
+    for(const p of pk||[]){
+      const[d,az]=distAz(lat,lon,p.lat,p.lon);if(d<300||d>R)continue;
+      const h=isNaN(p.ele)?hg(p.lat,p.lon,d):p.ele;
+      const a=ang(h,d),block=march(lat,lon,az,d*0.97);
+      if(a>=block-0.03)vis.push({...p,h,d,az,a});
+    }
+    sky=s;peaks=vis;calcPos={lat,lon};
+    msg(pk?'':'山の名前データを取得できませんでした（稜線のみ表示）。しばらくしてから「補正・設定」で範囲を選び直してください。');
+    if(!pk)setTimeout(()=>msg(''),6000);
+  }catch(e){msg('計算できませんでした。電波の良い場所でもう一度お試しください。')}
+  busy=false;
+}
+
+/* ---------- センサー ---------- */
+function onOri(e,abs){
+  let a=e.alpha;
+  if(e.webkitCompassHeading!==undefined&&e.webkitCompassHeading!==null)a=360-e.webkitCompassHeading;
+  else if(!abs&&!e.absolute)return;
+  if(a===null||e.beta===null)return;
+  const A=a*D2R,B=e.beta*D2R,G=e.gamma*D2R;
+  const cA=Math.cos(A),sA=Math.sin(A),cB=Math.cos(B),sB=Math.sin(B),cG=Math.cos(G),sG=Math.sin(G);
+  const vx=-(cG*sA*sB+cA*sG),vy=-(sA*sG-cA*cG*sB),vz=-(cB*cG);
+  const hd=Math.atan2(vx,vy);
+  sx=sx*0.8+Math.sin(hd)*0.2;sy=sy*0.8+Math.cos(hd)*0.2;
+  head=(Math.atan2(sx,sy)*R2D+360)%360;
+  const pt=Math.asin(Math.max(-1,Math.min(1,vz)))*R2D;pitch=pitch*0.8+pt*0.2;
+  const rl=Math.atan2(cB*sG,sB);roll=roll*0.8+rl*0.2;
+}
+function startSensors(){
+  if('ondeviceorientationabsolute' in window)addEventListener('deviceorientationabsolute',e=>onOri(e,true));
+  else addEventListener('deviceorientation',e=>onOri(e,false));
+}
+
+/* ---------- 描画 ---------- */
+const DIRS=['北','北北東','北東','東北東','東','東南東','南東','南南東','南','南南西','南西','西南西','西','西北西','北西','北北西'];
+const dirName=a=>DIRS[Math.round(a/22.5)%16];
+const wrap=d=>((d+540)%360)-180;
+function resize(){const r=devicePixelRatio||1;cv.width=innerWidth*r;cv.height=innerHeight*r;ctx.setTransform(r,0,0,r,0,0)}
+addEventListener('resize',resize);
+let shown=[];
+let running=false;
+function draw(){
+  if(!running)return;requestAnimationFrame(draw);
+  const W=innerWidth,H=innerHeight;ctx.clearRect(0,0,W,H);
+  if(head===null)return;
+  const fov=cfg.f/zoom,hd=(head+cfg.h+360)%360,pt=pitch+cfg.p,ppd=W/fov,cx=W/2,cy=H/2;
+  $('hd').textContent=`${dirName(hd)} ${Math.round(hd)}°`;
+  if(!sky)return;
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(-roll);
+  const X=az=>wrap(az-hd)*ppd,Y=e=>-(e-pt)*ppd;
+  const half=fov*Math.max(1,H/W)*0.75+4;
+  ctx.beginPath();let first=true;
+  for(let d=-half;d<=half;d+=0.5){const az=(Math.round((hd+d)*2)/2+360)%360;const e=sky[Math.round(az*2)%720];const x=X(az),y=Y(e);if(first){ctx.moveTo(x,y);first=false}else ctx.lineTo(x,y)}
+  ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.35)';ctx.stroke();
+  ctx.lineWidth=2.5;ctx.strokeStyle='#ffc23a';ctx.stroke();
+  const inView=peaks.filter(p=>Math.abs(wrap(p.az-hd))<half);
+  inView.sort((a,b)=>(b.h-b.d/50)-(a.h-a.d/50));
+  ctx.font='bold 14px sans-serif';
+  const rows=[[],[],[],[],[]];shown=[];
+  for(const p of inView){
+    const x=X(p.az),y=Y(p.a);
+    const t1=p.name,t2=`${Math.round(p.h)}m・${p.d<10000?(p.d/1000).toFixed(1):Math.round(p.d/1000)}km`;
+    const w=Math.max(ctx.measureText(t1).width,ctx.measureText(t2).width*0.85)+14;
+    let row=-1;for(let r=0;r<5;r++){if(rows[r].every(([l,rr])=>x+w/2<l-4||x-w/2>rr+4)){row=r;break}}
+    if(row<0)continue;rows[row].push([x-w/2,x+w/2]);
+    const skyY=Y(sky[Math.round(((p.az%360)+360)%360*2)%720]);
+    const ly=Math.min(y,skyY)-40-row*44;
+    ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,y-3);ctx.lineTo(x,ly);ctx.stroke();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-5,y-8);ctx.lineTo(x+5,y-8);ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,.62)';ctx.beginPath();ctx.roundRect(x-w/2,ly-38,w,38,6);ctx.fill();
+    ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='bold 14px sans-serif';ctx.fillText(t1,x,ly-21);
+    ctx.fillStyle='#ffd27a';ctx.font='12px sans-serif';ctx.fillText(t2,x,ly-6);ctx.font='bold 14px sans-serif';
+    shown.push(p);
+  }
+  ctx.restore();
+  $('loc').textContent=`見える山 ${shown.length}`;
+}
+
+/* ---------- 位置 ---------- */
+function startGPS(){
+  navigator.geolocation.watchPosition(p=>{
+    pos={lat:p.coords.latitude,lon:p.coords.longitude};
+    if(!sky)$('loc').textContent='計算中…';
+    if(!calcPos||distAz(calcPos.lat,calcPos.lon,pos.lat,pos.lon)[0]>400)compute();
+  },()=>{$('loc').textContent='位置情報が使えません';msg('位置情報をオンにして、アプリに許可してください。')},{enableHighAccuracy:true,maximumAge:10000});
+}
+
+/* ---------- 開始 ---------- */
+let started=false;
+$('go').onclick=async()=>{
+  try{if(window.DeviceOrientationEvent&&typeof DeviceOrientationEvent.requestPermission==='function')await DeviceOrientationEvent.requestPermission()}catch(e){}
+  $('op').style.display='none';resize();
+  try{const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});stream=st;vd.srcObject=st;await vd.play()}
+  catch(e){msg('カメラが使えません。カメラの使用を許可してください。')}
+  if(!started){startSensors();startGPS();started=true}running=true;draw();
+  try{screen.orientation.lock('portrait')}catch(e){}
+};
+
+/* ---------- パネル ---------- */
+const open=id=>{document.querySelectorAll('.panel').forEach(p=>p.style.display='none');$(id).style.display='block'};
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.parentElement.style.display='none');
+$('bList').onclick=()=>{
+  const l=[...peaks].sort((a,b)=>a.d-b.d).slice(0,80);
+  $('list').innerHTML=l.length?l.map(p=>`<div class="row"><span>${p.name}<br><small>${Math.round(p.h)}m</small></span><small>${dirName(p.az)}・${(p.d/1000).toFixed(1)}km</small></div>`).join(''):'<p class="note">まだ計算中か、見える山が見つかりません。</p>';
+  open('pList');
+};
+const showCfg=()=>{$('vH').textContent=(cfg.h>0?'+':'')+cfg.h+'°';$('vP').textContent=(cfg.p>0?'+':'')+cfg.p+'°';$('vF').textContent=cfg.f+'°';document.querySelectorAll('#seg button').forEach(b=>b.classList.toggle('on',+b.dataset.r===cfg.r))};
+$('bSet').onclick=()=>{showCfg();open('pSet')};
+document.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const k=b.dataset.a;cfg[k]=Math.round((cfg[k]+ +b.dataset.v)*10)/10;if(k==='f')cfg.f=Math.min(90,Math.max(20,cfg.f));sv(k,cfg[k]);showCfg()});
+document.querySelectorAll('#seg button').forEach(b=>b.onclick=()=>{cfg.r=+b.dataset.r;sv('r',cfg.r);showCfg();calcPos=null;$('pSet').style.display='none';compute()});
+$('bReset').onclick=()=>{cfg.h=0;cfg.p=0;cfg.f=52;['h','p','f'].forEach(k=>sv(k,cfg[k]));showCfg()};
+
+/* ---------- ズーム・終了 ---------- */
+$('bZoom').onclick=()=>{zoom=zoom===1?2:1;vd.classList.toggle('z2',zoom===2);$('bZoom').textContent=zoom+'倍'};
+let stream=null;
+$('bQuit').onclick=()=>{try{stream&&stream.getTracks().forEach(t=>t.stop())}catch(e){}vd.srcObject=null;running=false;document.querySelectorAll('.panel').forEach(p=>p.style.display='none');msg('');$('op').style.display='block';$('op').scrollTop=0};
+
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
