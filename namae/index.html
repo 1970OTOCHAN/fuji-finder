@@ -79,10 +79,10 @@ video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover}
   ・稜線と山名は、地形データから計算した目安です。木・建物・天気は反映されません。<br>
   ・スマホの方位センサーは数度ずれることがあります。ずれたときは「補正」で合わせてください。<br>
   ・カメラ、位置情報、方位センサーを使います。読み込みにはインターネット接続が必要です。<br>
-  ・標高：国土地理院 標高タイル／山名：© OpenStreetMap contributors</div>
+  ・標高：国土地理院 標高タイル／山名：国土地理院「日本の山岳標高一覧（1003山）」</div>
 
   <button id="go">同意してスタート</button>
-  <p class="cr">Ver 1.1　山なまえスコープ™ © 2026 1970 OTOCHAN</p>
+  <p class="cr">Ver 1.2　山なまえスコープ™ © 2026 1970 OTOCHAN</p>
 </div>
 <div id="rot">スマホを縦にしてください</div>
 
@@ -90,7 +90,7 @@ video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover}
 <canvas id="cv"></canvas>
 <div id="top"><span id="hd">方位 --</span><span id="loc">現在地を取得しています…</span></div>
 <div id="msg"></div>
-<div id="ver">Ver 1.1</div>
+<div id="ver">Ver 1.2</div>
 <div id="bar">
   <button id="bZoom">1倍</button>
   <button id="bList">リスト</button>
@@ -172,9 +172,13 @@ const NEAR=15000;
 const hg=(lat,lon,d)=>hAt(lat,lon,d<NEAR?12:10);
 function dest(lat,lon,az,d){const c=d/RE,la=lat*D2R,b=az*D2R;const la2=Math.asin(Math.sin(la)*Math.cos(c)+Math.cos(la)*Math.sin(c)*Math.cos(b));const lo2=lon*D2R+Math.atan2(Math.sin(b)*Math.sin(c)*Math.cos(la),Math.cos(c)-Math.sin(la)*Math.sin(la2));return[la2*R2D,lo2*R2D]}
 const ang=(h,d)=>Math.atan((h-obsH-d*d/(2*RE)*(1-K))/d)*R2D;
-function march(lat,lon,az,maxD){
-  let m=-90,d=60;
-  while(d<maxD){const[a,b]=dest(lat,lon,az,d);const e=ang(hg(a,b,d),d);if(e>m)m=e;d+=Math.max(25,d*0.006)}
+const BIN=250;
+function march(lat,lon,az,maxD,prof){
+  let m=-90,d=60,b=0;
+  while(d<maxD){const[a,c]=dest(lat,lon,az,d);const e=ang(hg(a,c,d),d);if(e>m)m=e;
+    if(prof){const nb=Math.floor(d/BIN);while(b<=nb&&b<prof.length){prof[b++]=m}}
+    d+=Math.max(25,d*0.006)}
+  if(prof)while(b<prof.length)prof[b++]=m;
   return m;
 }
 function distAz(lat1,lon1,lat2,lon2){
@@ -185,22 +189,12 @@ function distAz(lat1,lon1,lat2,lon2){
   return[d,az];
 }
 
-/* ---------- 山名（OpenStreetMap）：扇形の範囲だけ頼む ---------- */
-async function loadPeaks(clat,clon,a0,a1,R,key){
-  try{const c=localStorage.getItem(key);if(c)return JSON.parse(c)}catch(e){}
-  const pts=[[clat,clon]];for(let az=a0;az<=a1+0.01;az+=5)pts.push(dest(clat,clon,az,R+3000));
-  const poly=pts.map(([a,b])=>a.toFixed(4)+' '+b.toFixed(4)).join(' ');
-  const q=`[out:json][timeout:20];node["natural"~"^(peak|volcano)$"]["name"](poly:"${poly}");out;`;
-  const eps=['https://overpass-api.de/api/interpreter','https://overpass.private.coffee/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
-  for(const e of eps){
-    const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),20000);
-    try{const r=await fetch(e+'?data='+encodeURIComponent(q),{signal:ac.signal});clearTimeout(tm);if(!r.ok)continue;const j=await r.json();
-      const out=j.elements.map(n=>({name:n.tags['name:ja']||n.tags.name,ele:parseFloat(n.tags.ele),lat:n.lat,lon:n.lon})).filter(p=>p.name);
-      try{localStorage.setItem(key,JSON.stringify(out))}catch(e){}
-      return out;
-    }catch(err){clearTimeout(tm)}
-  }
-  return null;
+/* ---------- 山名：国土地理院「日本の山岳標高一覧（1003山）」をアプリに内蔵 ---------- */
+let ALL=null;
+async function loadPeaks(){
+  if(ALL)return ALL;
+  try{const r=await fetch('peaks.json',{cache:'no-store'});ALL=(await r.json()).map(([name,lat,lon,ele])=>({name,lat,lon,ele}))}catch(e){ALL=[]}
+  return ALL;
 }
 
 /* ---------- 計算：向いている方角から45°ずつ順番に ---------- */
@@ -211,7 +205,6 @@ async function compute(){
   const my=++gen;
   const{lat,lon}=pos,R=cfg.r*1000;
   calcPos={lat,lon};
-  const clat=Math.round(lat*50)/50,clon=Math.round(lon*50)/50;
   status='現在地の高さを調べています…';
   for(let w=0;w<30&&head===null;w++)await new Promise(r=>setTimeout(r,100));
   const h0=head===null?0:(head+cfg.h+360)%360;
@@ -220,29 +213,27 @@ async function compute(){
   obsH=hAt(lat,lon,12)+1.6;
   sky=new Float32Array(720).fill(NaN);peaks=[];
   const order=[0,1,2,3,4,5,6,7].sort((a,b)=>Math.abs(wrap(a*45+22.5-h0))-Math.abs(wrap(b*45+22.5-h0)));
-  let fail=0;
+  const pkAll=await loadPeaks();
+  const nb=Math.ceil(R/BIN)+1,prof=new Array(720);
   for(let n=0;n<8;n++){
     const sec=order[n],a0=sec*45,a1=a0+45,label=`${SECN[sec]}の山（${n+1}/8）`;
     status=`${label}を読み込み中…`;
-    const key=`ync_pk_${clat}_${clon}_${cfg.r}_${sec}`;
-    const[pk]=await Promise.all([loadPeaks(clat,clon,a0,a1,R,key),loadTiles(sectorTiles(lat,lon,a0,a1,R),label)]);
+    await loadTiles(sectorTiles(lat,lon,a0,a1,R),label);
     if(my!==gen)return;
     status=`${label}を計算中…`;
     await new Promise(r=>setTimeout(r,0));
-    for(let i=a0*2;i<a1*2;i++)sky[i]=march(lat,lon,i/2,R);
-    if(!pk)fail++;
+    for(let i=a0*2;i<a1*2;i++){prof[i]=new Float32Array(nb);sky[i]=march(lat,lon,i/2,R,prof[i])}
     const add=[];
-    for(const p of pk||[]){
+    for(const p of pkAll){
       const[d,az]=distAz(lat,lon,p.lat,p.lon);if(d<300||d>R||az<a0||az>=a1)continue;
-      const h=isNaN(p.ele)?hg(p.lat,p.lon,d):p.ele;
-      const a=ang(h,d),block=march(lat,lon,az,d*0.97);
-      if(a>=block-0.03)add.push({...p,h,d,az,a});
+      const a=ang(p.ele,d),pr=prof[Math.round(az*2)%720],block=pr?pr[Math.min(pr.length-1,Math.floor(d*0.97/BIN))]:-90;
+      if(a>=block-0.05)add.push({...p,h:p.ele,d,az,a});
     }
     if(my!==gen)return;
     peaks=peaks.concat(add);
   }
   status='';
-  if(fail){msg(`一部の方角（${fail}か所）で山の名前データを取得できませんでした。その方角は稜線だけ表示しています。`);setTimeout(()=>msg(''),6000)}
+  if(!pkAll.length){msg('山の名前データを読み込めませんでした（稜線のみ表示）。');setTimeout(()=>msg(''),6000)}
 }
 
 /* ---------- センサー ---------- */
