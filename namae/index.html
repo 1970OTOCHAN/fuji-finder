@@ -30,7 +30,8 @@ html,body{height:100%;background:#000;color:#fff;font-family:"Hiragino Sans","No
 #op .cr{text-align:center;color:#888780;font-size:12px;margin-top:16px}
 video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover}
 #cv{position:fixed;inset:0;width:100%;height:100%}
-#top{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;background:rgba(0,0,0,.5);display:flex;justify-content:space-between;font-size:14px;z-index:5}
+#top{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;background:rgba(0,0,0,.5);display:flex;justify-content:space-between;font-size:14px;z-index:5;gap:8px;font-size:13px}
+#loc{text-align:right}
 #msg{position:fixed;left:16px;right:16px;top:30%;text-align:center;background:rgba(0,0,0,.7);border-radius:10px;padding:14px;font-size:15px;line-height:1.6;z-index:6;display:none}
 #bar{position:fixed;left:0;right:0;bottom:0;padding:10px 12px calc(env(safe-area-inset-bottom) + 12px);background:rgba(0,0,0,.55);display:flex;justify-content:space-around;align-items:center;z-index:5}
 #bar button{background:none;border:0;color:#fff;font-size:13px;min-width:64px;min-height:44px}
@@ -81,7 +82,7 @@ video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover}
   ・標高：国土地理院 標高タイル／山名：© OpenStreetMap contributors</div>
 
   <button id="go">同意してスタート</button>
-  <p class="cr">Ver 1.0　山なまえスコープ™ © 2026 1970 OTOCHAN</p>
+  <p class="cr">Ver 1.1　山なまえスコープ™ © 2026 1970 OTOCHAN</p>
 </div>
 <div id="rot">スマホを縦にしてください</div>
 
@@ -89,7 +90,7 @@ video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover}
 <canvas id="cv"></canvas>
 <div id="top"><span id="hd">方位 --</span><span id="loc">現在地を取得しています…</span></div>
 <div id="msg"></div>
-<div id="ver">Ver 1.0</div>
+<div id="ver">Ver 1.1</div>
 <div id="bar">
   <button id="bZoom">1倍</button>
   <button id="bList">リスト</button>
@@ -122,7 +123,7 @@ const D2R=Math.PI/180,R2D=180/Math.PI,RE=6371000,K=0.13;
 const ld=(k,d)=>{try{const v=localStorage.getItem('ync_'+k);return v===null?d:JSON.parse(v)}catch(e){return d}};
 const sv=(k,v)=>{try{localStorage.setItem('ync_'+k,JSON.stringify(v))}catch(e){}};
 let cfg={h:ld('h',0),p:ld('p',0),f:ld('f',52),r:ld('r',100)};
-let zoom=1,pos=null,calcPos=null,obsH=0,sky=null,peaks=[],busy=false;
+let zoom=1,pos=null,calcPos=null,obsH=0,sky=null,peaks=[];
 let head=null,pitch=0,roll=0,sx=0,sy=0;
 const cv=$('cv'),ctx=cv.getContext('2d'),vd=$('vd');
 const msg=t=>{const m=$('msg');if(t){m.textContent=t;m.style.display='block'}else m.style.display='none'};
@@ -154,15 +155,17 @@ function hAt(lat,lon,z){
   const ix=fx|0,iy=fy|0,dx=fx-ix,dy=fy-iy,i=iy*256+ix;
   return a[i]*(1-dx)*(1-dy)+a[i+1]*dx*(1-dy)+a[i+256]*(1-dx)*dy+a[i+257]*dx*dy;
 }
-function tileRange(lat,lon,rad,z){
-  const dLat=rad/111320,dLon=rad/(111320*Math.cos(lat*D2R));
-  const[a0,b0]=px(lat+dLat,lon-dLon,z),[a1,b1]=px(lat-dLat,lon+dLon,z);
-  const out=[];for(let x=Math.floor(a0/256);x<=Math.floor(a1/256);x++)for(let y=Math.floor(b0/256);y<=Math.floor(b1/256);y++)out.push([z,x,y]);return out;
+function sectorTiles(lat,lon,a0,a1,R){
+  const set=new Set();
+  for(let az=a0;az<=a1+0.01;az+=1){
+    for(let d=0;d<=Math.min(R,16000);d+=1500){const[la,lo]=dest(lat,lon,az,d);const[X,Y]=px(la,lo,12);set.add('12/'+Math.floor(X/256)+'/'+Math.floor(Y/256))}
+    for(let d=14000;d<=R+3000;d+=6000){const[la,lo]=dest(lat,lon,az,d);const[X,Y]=px(la,lo,10);set.add('10/'+Math.floor(X/256)+'/'+Math.floor(Y/256))}
+  }
+  return[...set].map(k=>k.split('/').map(Number));
 }
-async function loadAll(lat,lon,R){
-  const list=[...tileRange(lat,lon,16000,12),...tileRange(lat,lon,R,10)];
+async function loadTiles(list,label){
   let done=0,i=0;
-  const work=async()=>{while(i<list.length){const t=list[i++];await loadTile(...t);done++;msg(`地形データを読み込み中… ${done}/${list.length}`)}};
+  const work=async()=>{while(i<list.length){const t=list[i++];await loadTile(...t);done++;status=`${label}を読み込み中… 地形 ${done}/${list.length}`}};
   await Promise.all(Array.from({length:8},work));
 }
 const NEAR=15000;
@@ -182,43 +185,64 @@ function distAz(lat1,lon1,lat2,lon2){
   return[d,az];
 }
 
-/* ---------- 山名（OpenStreetMap） ---------- */
-async function loadPeaks(lat,lon,R){
-  const q=`[out:json][timeout:40];node["natural"~"^(peak|volcano)$"]["name"](around:${R},${lat.toFixed(5)},${lon.toFixed(5)});out;`;
-  const eps=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
+/* ---------- 山名（OpenStreetMap）：扇形の範囲だけ頼む ---------- */
+async function loadPeaks(clat,clon,a0,a1,R,key){
+  try{const c=localStorage.getItem(key);if(c)return JSON.parse(c)}catch(e){}
+  const pts=[[clat,clon]];for(let az=a0;az<=a1+0.01;az+=5)pts.push(dest(clat,clon,az,R+3000));
+  const poly=pts.map(([a,b])=>a.toFixed(4)+' '+b.toFixed(4)).join(' ');
+  const q=`[out:json][timeout:20];node["natural"~"^(peak|volcano)$"]["name"](poly:"${poly}");out;`;
+  const eps=['https://overpass-api.de/api/interpreter','https://overpass.private.coffee/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
   for(const e of eps){
-    try{const r=await fetch(e+'?data='+encodeURIComponent(q));if(!r.ok)continue;const j=await r.json();
-      return j.elements.map(n=>({name:n.tags['name:ja']||n.tags.name,ele:parseFloat(n.tags.ele),lat:n.lat,lon:n.lon})).filter(p=>p.name);
-    }catch(err){}
+    const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),20000);
+    try{const r=await fetch(e+'?data='+encodeURIComponent(q),{signal:ac.signal});clearTimeout(tm);if(!r.ok)continue;const j=await r.json();
+      const out=j.elements.map(n=>({name:n.tags['name:ja']||n.tags.name,ele:parseFloat(n.tags.ele),lat:n.lat,lon:n.lon})).filter(p=>p.name);
+      try{localStorage.setItem(key,JSON.stringify(out))}catch(e){}
+      return out;
+    }catch(err){clearTimeout(tm)}
   }
   return null;
 }
 
-/* ---------- 計算 ---------- */
+/* ---------- 計算：向いている方角から45°ずつ順番に ---------- */
+let gen=0,status='';
+const SECN=['北〜北東','北東〜東','東〜南東','南東〜南','南〜南西','南西〜西','西〜北西','北西〜北'];
 async function compute(){
-  if(busy||!pos)return;busy=true;
+  if(!pos)return;
+  const my=++gen;
   const{lat,lon}=pos,R=cfg.r*1000;
-  try{
-    msg('山の名前データを読み込み中…');
-    const pk=await loadPeaks(lat,lon,R);
-    await loadAll(lat,lon,R);
-    msg('見える景色を計算中…');
-    await new Promise(r=>setTimeout(r,30));
-    obsH=hAt(lat,lon,12)+1.6;
-    const s=new Float32Array(720);
-    for(let i=0;i<720;i++)s[i]=march(lat,lon,i/2,R);
-    const vis=[];
+  calcPos={lat,lon};
+  const clat=Math.round(lat*50)/50,clon=Math.round(lon*50)/50;
+  status='現在地の高さを調べています…';
+  for(let w=0;w<30&&head===null;w++)await new Promise(r=>setTimeout(r,100));
+  const h0=head===null?0:(head+cfg.h+360)%360;
+  await loadTile(12,...px(lat,lon,12).map(v=>Math.floor(v/256)));
+  if(my!==gen)return;
+  obsH=hAt(lat,lon,12)+1.6;
+  sky=new Float32Array(720).fill(NaN);peaks=[];
+  const order=[0,1,2,3,4,5,6,7].sort((a,b)=>Math.abs(wrap(a*45+22.5-h0))-Math.abs(wrap(b*45+22.5-h0)));
+  let fail=0;
+  for(let n=0;n<8;n++){
+    const sec=order[n],a0=sec*45,a1=a0+45,label=`${SECN[sec]}の山（${n+1}/8）`;
+    status=`${label}を読み込み中…`;
+    const key=`ync_pk_${clat}_${clon}_${cfg.r}_${sec}`;
+    const[pk]=await Promise.all([loadPeaks(clat,clon,a0,a1,R,key),loadTiles(sectorTiles(lat,lon,a0,a1,R),label)]);
+    if(my!==gen)return;
+    status=`${label}を計算中…`;
+    await new Promise(r=>setTimeout(r,0));
+    for(let i=a0*2;i<a1*2;i++)sky[i]=march(lat,lon,i/2,R);
+    if(!pk)fail++;
+    const add=[];
     for(const p of pk||[]){
-      const[d,az]=distAz(lat,lon,p.lat,p.lon);if(d<300||d>R)continue;
+      const[d,az]=distAz(lat,lon,p.lat,p.lon);if(d<300||d>R||az<a0||az>=a1)continue;
       const h=isNaN(p.ele)?hg(p.lat,p.lon,d):p.ele;
       const a=ang(h,d),block=march(lat,lon,az,d*0.97);
-      if(a>=block-0.03)vis.push({...p,h,d,az,a});
+      if(a>=block-0.03)add.push({...p,h,d,az,a});
     }
-    sky=s;peaks=vis;calcPos={lat,lon};
-    msg(pk?'':'山の名前データを取得できませんでした（稜線のみ表示）。しばらくしてから「補正・設定」で範囲を選び直してください。');
-    if(!pk)setTimeout(()=>msg(''),6000);
-  }catch(e){msg('計算できませんでした。電波の良い場所でもう一度お試しください。')}
-  busy=false;
+    if(my!==gen)return;
+    peaks=peaks.concat(add);
+  }
+  status='';
+  if(fail){msg(`一部の方角（${fail}か所）で山の名前データを取得できませんでした。その方角は稜線だけ表示しています。`);setTimeout(()=>msg(''),6000)}
 }
 
 /* ---------- センサー ---------- */
@@ -255,12 +279,12 @@ function draw(){
   if(head===null)return;
   const fov=cfg.f/zoom,hd=(head+cfg.h+360)%360,pt=pitch+cfg.p,ppd=W/fov,cx=W/2,cy=H/2;
   $('hd').textContent=`${dirName(hd)} ${Math.round(hd)}°`;
-  if(!sky)return;
+  if(!sky){$('loc').textContent=status||'現在地を取得しています…';return}
   ctx.save();ctx.translate(cx,cy);ctx.rotate(-roll);
   const X=az=>wrap(az-hd)*ppd,Y=e=>-(e-pt)*ppd;
   const half=fov*Math.max(1,H/W)*0.75+4;
   ctx.beginPath();let first=true;
-  for(let d=-half;d<=half;d+=0.5){const az=(Math.round((hd+d)*2)/2+360)%360;const e=sky[Math.round(az*2)%720];const x=X(az),y=Y(e);if(first){ctx.moveTo(x,y);first=false}else ctx.lineTo(x,y)}
+  for(let d=-half;d<=half;d+=0.5){const az=(Math.round((hd+d)*2)/2+360)%360;const e=sky[Math.round(az*2)%720];if(isNaN(e)){first=true;continue}const x=X(az),y=Y(e);if(first){ctx.moveTo(x,y);first=false}else ctx.lineTo(x,y)}
   ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.35)';ctx.stroke();
   ctx.lineWidth=2.5;ctx.strokeStyle='#ffc23a';ctx.stroke();
   const inView=peaks.filter(p=>Math.abs(wrap(p.az-hd))<half);
@@ -283,14 +307,13 @@ function draw(){
     shown.push(p);
   }
   ctx.restore();
-  $('loc').textContent=`見える山 ${shown.length}`;
+  $('loc').textContent=status||`見える山 ${shown.length}`;
 }
 
 /* ---------- 位置 ---------- */
 function startGPS(){
   navigator.geolocation.watchPosition(p=>{
     pos={lat:p.coords.latitude,lon:p.coords.longitude};
-    if(!sky)$('loc').textContent='計算中…';
     if(!calcPos||distAz(calcPos.lat,calcPos.lon,pos.lat,pos.lon)[0]>400)compute();
   },()=>{$('loc').textContent='位置情報が使えません';msg('位置情報をオンにして、アプリに許可してください。')},{enableHighAccuracy:true,maximumAge:10000});
 }
