@@ -1,6 +1,6 @@
 {
-  "name": "山なまえスコープ",
-  "short_name": "山なまえスコープ",
+  "name": "この山なぁ〜に？",
+  "short_name": "この山なぁ〜に？",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",
