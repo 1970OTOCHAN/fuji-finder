@@ -77,7 +77,7 @@ body[data-rot="90"] .bottom .info,body[data-rot="-90"] .bottom .info{position:ab
 <p class="en">Yama Scope</p>
 <p class="catch">富士山をさがせ！</p>
 <p class="lead">現在地からの富士山の見え方を表示</p>
-<p class="ver">Ver 1.0</p>
+<p class="ver">Ver 1.1</p>
 <div class="warn"><b style="font-size:17px">⚠ 注意</b><br>歩きながら・運転しながら画面を見ないでください。周りと足元の安全に気を付けてください。</div>
 <div class="card">
 <p><b>免責</b></p>
@@ -186,9 +186,10 @@ function pill(c,cx,y,text,col){
   c.fillStyle='rgba(0,0,0,.6)';c.beginPath();c.roundRect?c.roundRect(cx-tw/2-14,y-24,tw+28,34,10):c.rect(cx-tw/2-14,y-24,tw+28,34);c.fill();
   c.fillStyle=col;c.textAlign='center';c.fillText(text,cx,y);
 }
-function tape(c,W,y0,diff){
-  const bh=56,span=80,k=W/span,cx=W/2,lab={0:'北',45:'北東',90:'東',135:'南東',180:'南',225:'南西',270:'西',315:'北西'};
-  c.fillStyle='rgba(0,0,0,.55)';c.fillRect(0,y0,W,bh);
+function tape(c,W,y0,diff,x0,tw0,span){
+  if(x0==null){x0=0;tw0=W;span=80}
+  const bh=56,k=tw0/span,cx=x0+tw0/2,lab={0:'北',45:'北東',90:'東',135:'南東',180:'南',225:'南西',270:'西',315:'北西'};
+  c.fillStyle='rgba(0,0,0,.55)';c.fillRect(x0,y0,tw0,bh);c.save();c.beginPath();c.rect(x0,y0-2,tw0,bh+4);c.clip();
   c.textAlign='center';
   const start=Math.floor((heading-span/2)/5)*5;
   for(let a=start;a<=heading+span/2;a+=5){
@@ -197,10 +198,11 @@ function tape(c,W,y0,diff){
     if(aa%45===0){c.fillStyle=aa===0?'#ff8a8a':'#fff';c.font='bold 14px sans-serif';c.fillText(lab[aa],x,y0+30)}
     else if(big){c.fillStyle='#a9b4c8';c.font='12px sans-serif';c.fillText(aa,x,y0+28)}
   }
+  c.restore();c.textAlign='center';
   const sx=cx+diff*k,col=onTarget?'#7bd36a':'#FFEB3B',my=y0+48;
   c.fillStyle=col;c.strokeStyle='#000';c.lineWidth=1.5;
   if(Math.abs(diff)<span/2){c.beginPath();c.moveTo(sx-11,my);c.lineTo(sx-4,my-10);c.lineTo(sx,my-12);c.lineTo(sx+4,my-10);c.lineTo(sx+11,my);c.closePath();c.fill();c.stroke()}
-  else{const ex=diff>0?W-14:14,d=diff>0?1:-1;c.beginPath();c.moveTo(ex+d*8,y0+42);c.lineTo(ex-d*6,y0+34);c.lineTo(ex-d*6,y0+50);c.closePath();c.fill();c.stroke()}
+  else{const ex=diff>0?x0+tw0-14:x0+14,d=diff>0?1:-1;c.beginPath();c.moveTo(ex+d*8,y0+42);c.lineTo(ex-d*6,y0+34);c.lineTo(ex-d*6,y0+50);c.closePath();c.fill();c.stroke()}
   c.strokeStyle=onTarget?'#7bd36a':'#ff4d4d';c.lineWidth=3;c.beginPath();c.moveTo(cx,y0-6);c.lineTo(cx,y0+bh+2);c.stroke();
   const msg=onTarget?'景色の目印を覚えてください':(diff>0?'右へ '+Math.round(Math.abs(diff))+'° ▶':'◀ 左へ '+Math.round(Math.abs(diff))+'°');
   c.font='bold 17px sans-serif';const tw=c.measureText(msg).width;
@@ -271,9 +273,9 @@ function loop(){
   const left=L===-1?bar:16;
   hudText(c,left+10,32,topText,'#fff');
   if(onTarget){c.font='bold 17px sans-serif';const t='✓ この方向です',tw=c.measureText(t).width;c.fillStyle='#e8f6e2';c.beginPath();c.roundRect?c.roundRect(cx-tw/2-16,48,tw+32,32,16):c.rect(cx-tw/2-16,48,tw+32,32);c.fill();c.fillStyle='#1d4a12';c.textAlign='center';c.fillText(t,cx,70)}
-  const lines=[near,see].concat(suso?[suso]:[]);
-  const infoTop=VH-14-lines.length*24;
-  tape(c,VW,infoTop-70,diff);
+  const lines=[near].concat(topEl>0?['見える高さ 約'+topEl.toFixed(1)+'°','（'+sizeWord(topEl)+'）']:['地球の丸みで隠れています','（点線の部分）']).concat(suso?[suso]:[]);
+  const infoTop=VH-14-lines.length*24,tw0=Math.round(VW/3);
+  tape(c,VW,VH-56-14,diff,cx-tw0/2,tw0,30);
   c.font='bold 15px sans-serif';c.textAlign='left';c.lineWidth=3;
   lines.forEach((t,i)=>{const y=infoTop+18+i*24;c.strokeStyle='rgba(0,0,0,.75)';c.strokeText(t,left+4,y);c.fillStyle='#fff';c.fillText(t,left+4,y)});
   c.restore();
