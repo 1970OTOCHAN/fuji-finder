@@ -48,11 +48,18 @@ h1{font-size:32px;line-height:1.15;margin:10px 0 2px;font-weight:800;text-align:
 .bottom .info b{font-size:20px}
 #rotate{display:none;position:fixed;inset:0;z-index:99;background:#0f1a2e;color:#f4f1ea;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;font-size:20px;font-weight:800}
 @media (orientation:landscape) and (max-height:520px){#rotate{display:flex}}
+.chip span{display:inline-block;transition:transform .25s}
+body[data-rot="90"] .chip span{transform:rotate(90deg)}
+body[data-rot="-90"] .chip span{transform:rotate(-90deg)}
+body[data-rot="90"] #fTop,body[data-rot="-90"] #fTop,body[data-rot="90"] .bottom .info,body[data-rot="-90"] .bottom .info{visibility:hidden}
+body[data-rot="90"] #finder.okframe #okpill,body[data-rot="-90"] #finder.okframe #okpill{display:none}
+body[data-rot="90"] .bottom,body[data-rot="-90"] .bottom{justify-content:space-around}
+body[data-rot="90"] .bottom .info,body[data-rot="-90"] .bottom .info{position:absolute}
 </style>
 </head>
 <body>
 
-<div id="rotate">スマホを縦にしてください<span style="font-size:14px;font-weight:400;color:#a9b4c8">このアプリは縦画面専用です</span></div>
+<div id="rotate">画面の自動回転をオフにしてください<span style="font-size:14px;font-weight:400;color:#a9b4c8">（横に持っても使えます）</span></div>
 
 <section id="opening" class="screen on">
 <svg class="hero" viewBox="40 16 220 128" aria-hidden="true">
@@ -70,7 +77,7 @@ h1{font-size:32px;line-height:1.15;margin:10px 0 2px;font-weight:800;text-align:
 <p class="en">Yama Scope</p>
 <p class="catch">富士山をさがせ！</p>
 <p class="lead">現在地からの富士山の見え方を表示</p>
-<p class="ver">Ver 0.9</p>
+<p class="ver">Ver 1.0</p>
 <div class="warn"><b style="font-size:17px">⚠ 注意</b><br>歩きながら・運転しながら画面を見ないでください。周りと足元の安全に気を付けてください。</div>
 <div class="card">
 <p><b>免責</b></p>
@@ -96,8 +103,8 @@ h1{font-size:32px;line-height:1.15;margin:10px 0 2px;font-weight:800;text-align:
 <div id="msg"></div>
 <div class="bottom">
 <div class="info" id="fInfo">現在地を取得しています…</div>
-<button class="chip" id="zoom">1倍</button>
-<button class="chip" id="back">終了</button>
+<button class="chip" id="zoom"><span>1倍</span></button>
+<button class="chip" id="back"><span>終了</span></button>
 </div>
 </section>
 
@@ -110,7 +117,7 @@ const SIL=[...PROF.slice(1).reverse().map(([x,h])=>[-x,h]),...PROF];
 const DIRS=['北','北北東','北東','東北東','東','東南東','南東','南南東','南','南南西','南西','西南西','西','西北西','北西','北北西'];
 const FOV=50,ZOOMS=[1,2,4];
 let lat=null,lng=null,alt0=0,dist=null,brg=null,topEl=null,zi=0;
-let onTarget=false,actx=null,hx=null,hy=null,heading=null,pitch=0,gotSensor=false,oriName=null,stream=null,raf=0,wake=null,watchId=null;
+let onTarget=false,actx=null,hx=null,hy=null,heading=null,pitch=0,gotSensor=false,oriName=null,roll=0,land=0,stream=null,raf=0,wake=null,watchId=null;
 
 function show(id){for(const s of document.querySelectorAll('.screen'))s.classList.toggle('on',s.id===id)}
 function norm(a){return((a+540)%360)-180}
@@ -134,14 +141,17 @@ function startLoc(){
   },()=>{$('fInfo').textContent='現在地を取得できませんでした。位置情報をオンにしてください'},{enableHighAccuracy:true,timeout:20000,maximumAge:10000});
 }
 function onOri(e){
-  let h=null,p=null;
+  let h=null,p=null,al=e.alpha;
+  const ios=typeof e.webkitCompassHeading==='number';
+  if(ios)al=360-e.webkitCompassHeading;
   if(e.beta!=null&&e.gamma!=null){
-    const cA=Math.cos((e.alpha||0)*R),sA=Math.sin((e.alpha||0)*R),cB=Math.cos(e.beta*R),sB=Math.sin(e.beta*R),cG=Math.cos(e.gamma*R),sG=Math.sin(e.gamma*R);
+    const cA=Math.cos((al||0)*R),sA=Math.sin((al||0)*R),cB=Math.cos(e.beta*R),sB=Math.sin(e.beta*R),cG=Math.cos(e.gamma*R),sG=Math.sin(e.gamma*R);
     const vx=-(cG*sA*sB+cA*sG),vy=-(sA*sG-cA*cG*sB),vz=-(cB*cG);
     p=Math.asin(Math.max(-1,Math.min(1,vz)))/R;
-    if(e.absolute===true||oriName==='deviceorientationabsolute')h=((Math.atan2(vx,vy)/R)+360)%360;
+    if(ios||e.absolute===true||oriName==='deviceorientationabsolute')h=((Math.atan2(vx,vy)/R)+360)%360;
+    roll+=(Math.atan2(cB*sG,sB)-roll)*0.2;
   }
-  if(typeof e.webkitCompassHeading==='number')h=e.webkitCompassHeading;
+  else if(ios)h=e.webkitCompassHeading;
   if(h==null)return;
   gotSensor=true;
   const k=0.15,sx=Math.sin(h*R),sy=Math.cos(h*R);
@@ -165,7 +175,7 @@ function stopAll(){
   if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
   if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
   if(wake){wake.release().catch(()=>{});wake=null}
-  hx=hy=heading=null;gotSensor=false;onTarget=false;$('finder').classList.remove('okframe');
+  hx=hy=heading=null;gotSensor=false;onTarget=false;roll=0;land=0;document.body.dataset.rot='0';$('finder').classList.remove('okframe');
 }
 function beep(n){
   try{if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();
@@ -176,9 +186,8 @@ function pill(c,cx,y,text,col){
   c.fillStyle='rgba(0,0,0,.6)';c.beginPath();c.roundRect?c.roundRect(cx-tw/2-14,y-24,tw+28,34,10):c.rect(cx-tw/2-14,y-24,tw+28,34);c.fill();
   c.fillStyle=col;c.textAlign='center';c.fillText(text,cx,y);
 }
-function tape(c,W,H,diff){
-  const bt=document.querySelector('.bottom').getBoundingClientRect().top-$('cv').getBoundingClientRect().top;
-  const bh=56,y0=bt-bh-10,span=80,k=W/span,cx=W/2,lab={0:'北',45:'北東',90:'東',135:'南東',180:'南',225:'南西',270:'西',315:'北西'};
+function tape(c,W,y0,diff){
+  const bh=56,span=80,k=W/span,cx=W/2,lab={0:'北',45:'北東',90:'東',135:'南東',180:'南',225:'南西',270:'西',315:'北西'};
   c.fillStyle='rgba(0,0,0,.55)';c.fillRect(0,y0,W,bh);
   c.textAlign='center';
   const start=Math.floor((heading-span/2)/5)*5;
@@ -198,24 +207,39 @@ function tape(c,W,H,diff){
   c.fillStyle='rgba(0,0,0,.55)';c.fillRect(cx-tw/2-12,y0-40,tw+24,30);
   c.fillStyle=onTarget?'#7bd36a':'#fff';c.fillText(msg,cx,y0-19);
 }
+function hudText(c,x,y,text,col,align){
+  c.font='bold 16px sans-serif';c.textAlign=align||'left';const tw=c.measureText(text).width,lx=align==='center'?x-tw/2:x;
+  c.fillStyle='rgba(0,0,0,.55)';c.beginPath();c.roundRect?c.roundRect(lx-10,y-21,tw+20,30,8):c.rect(lx-10,y-21,tw+20,30);c.fill();
+  c.fillStyle=col;c.fillText(text,x,y);
+}
 function loop(){
   raf=requestAnimationFrame(loop);
   const cv=$('cv'),dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;
   if(cv.width!==W*dpr){cv.width=W*dpr;cv.height=H*dpr}
   const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);
+  // 横持ちの見分け（この山なぁ〜に？と同じ：55°を超えたら横、35°未満で縦に戻す）
+  const ar=Math.abs(roll)/R,nl=ar>55?(roll>0?-1:1):(ar<35?0:land);
+  if(nl!==land){land=nl;document.body.dataset.rot=String(land*90)}
+  const L=land,VW=L?H:W,VH=L?W:H;
   if(dist==null)return;
   const z=ZOOMS[zi];
-  $('fInfo').innerHTML='<b>'+dirName(brg)+' '+Math.round(brg)+'°</b>　約'+(dist<10?dist.toFixed(1):Math.round(dist))+'km<br>'+(topEl>0?'見える高さ 約'+topEl.toFixed(1)+'°（'+sizeWord(topEl)+'）'+(elev(PROF[PROF.length-1][1])<0?'<br>すそは地球の丸みで隠れます':''):'地球の丸みで隠れています（点線の部分）');
+  const near=dirName(brg)+' '+Math.round(brg)+'°　約'+(dist<10?dist.toFixed(1):Math.round(dist))+'km';
+  const see=topEl>0?'見える高さ 約'+topEl.toFixed(1)+'°（'+sizeWord(topEl)+'）':'地球の丸みで隠れています（点線の部分）';
+  const suso=topEl>0&&elev(PROF[PROF.length-1][1])<0?'すそは地球の丸みで隠れます':'';
+  $('fInfo').innerHTML='<b>'+near+'</b><br>'+see+(suso?'<br>'+suso:'');
   if(heading==null){pill(c,W/2,H*0.45,'センサー準備中…','#fff');return}
   if(dist<3){pill(c,W/2,H*0.45,'富士山のすぐ近くです','#fff');return}
-  const ppd=W/(FOV/z),cx=W/2,cy=H/2;
+  const ppd=W/(FOV/z),cx=VW/2,cy=VH/2;
+  // ここから景色の線（横持ちのときは傾きに合わせて回す）
+  c.save();
+  if(L){c.translate(W/2,H/2);c.rotate(-roll);c.translate(-VW/2,-VH/2)}
   const hy0=cy+pitch*ppd;
-  c.setLineDash([8,6]);c.strokeStyle='rgba(255,255,255,.5)';c.lineWidth=1.5;c.beginPath();c.moveTo(0,hy0);c.lineTo(W,hy0);c.stroke();c.setLineDash([]);
+  c.setLineDash([8,6]);c.strokeStyle='rgba(255,255,255,.5)';c.lineWidth=1.5;c.beginPath();c.moveTo(-VW*0.3,hy0);c.lineTo(VW*1.3,hy0);c.stroke();c.setLineDash([]);
   c.font='bold 14px sans-serif';c.textAlign='left';c.lineWidth=3;c.strokeStyle='rgba(0,0,0,.6)';c.strokeText('水平線',8,hy0-6);c.fillStyle='#fff';c.fillText('水平線',8,hy0-6);
-  const diff=norm(brg-heading),half=FOV/z/2,ad=Math.abs(diff);
+  const diff=norm(brg-heading),half=VW/ppd/2,ad=Math.abs(diff);
   if(!onTarget&&ad<=2){onTarget=true;beep(2)}else if(onTarget&&ad>3.5)onTarget=false;
   $('finder').classList.toggle('okframe',onTarget);
-  c.strokeStyle='rgba(255,255,255,.7)';c.lineWidth=1.2;c.beginPath();c.moveTo(cx,0);c.lineTo(cx,H);c.stroke();
+  c.strokeStyle='rgba(255,255,255,.7)';c.lineWidth=1.2;c.beginPath();c.moveTo(cx,-VH*0.3);c.lineTo(cx,VH*1.3);c.stroke();
   if(Math.abs(diff)<half+2){
     const els=SIL.map(([x,h])=>elev(h));
     const pts=SIL.map(([x,h],i)=>[cx+(diff+Math.atan2(x,dist)/R)*ppd,cy-(els[i]-pitch)*ppd]);
@@ -230,20 +254,39 @@ function loop(){
     const [sx,sy]=pts[PROF.length-1],tall=pts[0][1]-sy;
     if(tall<24){c.strokeStyle='#ffffff';c.lineWidth=1.5;c.beginPath();c.arc(sx,sy+tall/2,30,0,7);c.stroke()}
     pill(c,sx,sy-Math.max(18,40-tall/2)-10,'富士山','#ffd98a');
-    if(pitch>12)pill(c,cx,H*0.2,'カメラを少し下に向けてください','#fff');
-    else if(pitch<-12)pill(c,cx,H*0.2,'カメラを少し上に向けてください','#fff');
+    if(pitch>12)pill(c,cx,VH*0.2,'カメラを少し下に向けてください','#fff');
+    else if(pitch<-12)pill(c,cx,VH*0.2,'カメラを少し上に向けてください','#fff');
   }
-  tape(c,W,H,diff);
-  $('fTop').textContent='今の向き '+Math.round(heading)+'°　目標 '+Math.round(brg)+'°';
+  c.restore();
+  const topText='今の向き '+Math.round(heading)+'°　目標 '+Math.round(brg)+'°';
+  if(!L){
+    const bt=document.querySelector('.bottom').getBoundingClientRect().top-cv.getBoundingClientRect().top;
+    tape(c,W,bt-66,diff);
+    $('fTop').textContent=topText;
+    return;
+  }
+  // 横持ち：目盛り帯と文字を横向きに描く（ボタンの帯がある側はあける）
+  c.save();c.translate(W/2,H/2);c.rotate(L*Math.PI/2);c.translate(-VW/2,-VH/2);
+  const sb=document.querySelector('.bottom').getBoundingClientRect(),bar=Math.max(76,H-sb.top+8);
+  const left=L===-1?bar:16;
+  hudText(c,left+10,32,topText,'#fff');
+  if(onTarget){c.font='bold 17px sans-serif';const t='✓ この方向です',tw=c.measureText(t).width;c.fillStyle='#e8f6e2';c.beginPath();c.roundRect?c.roundRect(cx-tw/2-16,48,tw+32,32,16):c.rect(cx-tw/2-16,48,tw+32,32);c.fill();c.fillStyle='#1d4a12';c.textAlign='center';c.fillText(t,cx,70)}
+  const lines=[near,see].concat(suso?[suso]:[]);
+  const infoTop=VH-14-lines.length*24;
+  tape(c,VW,infoTop-70,diff);
+  c.font='bold 15px sans-serif';c.textAlign='left';c.lineWidth=3;
+  lines.forEach((t,i)=>{const y=infoTop+18+i*24;c.strokeStyle='rgba(0,0,0,.75)';c.strokeText(t,left+4,y);c.fillStyle='#fff';c.fillText(t,left+4,y)});
+  c.restore();
 }
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}
 $('agree').onclick=async()=>{
   show('finder');$('msg').textContent='';beep(1);
+  try{screen.orientation.lock('portrait').catch(()=>{})}catch(err){}
   startLoc();await startSensor();startCam();
   try{if(navigator.wakeLock)wake=await navigator.wakeLock.request('screen')}catch(err){}
   loop();
 };
-$('zoom').onclick=()=>{zi=(zi+1)%ZOOMS.length;$('zoom').textContent=ZOOMS[zi]+'倍';$('vid').style.transform='scale('+ZOOMS[zi]+')'};
+$('zoom').onclick=()=>{zi=(zi+1)%ZOOMS.length;$('zoom').firstChild.textContent=ZOOMS[zi]+'倍';$('vid').style.transform='scale('+ZOOMS[zi]+')'};
 $('back').onclick=()=>{stopAll();show('opening')};
 }
 </script>
