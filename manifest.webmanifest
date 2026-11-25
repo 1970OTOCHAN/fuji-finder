@@ -1,6 +1,6 @@
 {
-  "name": "やまスコープ™ 富士山をさがせ！",
-  "short_name": "やまスコープ",
+  "name": "富士山スコープ™",
+  "short_name": "富士山スコープ",
   "description": "現在地からの富士山の見え方を表示",
   "lang": "ja",
   "start_url": "./",
